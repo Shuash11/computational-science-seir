@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run simulation pipeline
+        run: python main.py
+      - name: Build PDF report
+        run: python make_report.py
+      - name: Build PowerPoint presentation
+        run: python make_pptx.py
+      - name: Verify deliverables
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          from pypdf import PdfReader
+          from pptx import Presentation
+
+          report_path = Path("output/SEIR_Report.pdf")
+          presentation_path = Path("output/SEIR_Presentation.pptx")
+
+          page_count = len(PdfReader(report_path).pages)
+          slide_count = len(Presentation(presentation_path).slides)
+
+          assert 5 <= page_count <= 8, f"Expected 5-8 PDF pages, found {page_count}"
+          assert slide_count >= 12, f"Expected at least 12 slides, found {slide_count}"
+          assert Path("data/synthetic_epidemic.csv").is_file()
+          assert Path("plots/all_figures.pdf").is_file()
+          assert Path("plots/P1_dataset_overview.png").is_file()
+
+          print(
+              "OK: deliverables verified "
+              f"(PDF pages={page_count}, PPTX slides={slide_count})"
+          )
+          PY
