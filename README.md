@@ -21,6 +21,19 @@ healthcare capacity threshold, epidemic duration, and the effective
 reproduction number, and reports which strategy best protects hospital
 capacity.
 
+## Live demo (GitHub Pages)
+
+An interactive browser demo of the model runs at
+
+**https://shuash11.github.io/computational-science-seir/**
+
+Drag the transmission and vaccination controls or click a policy preset; the
+SEIRV system is re-integrated instantly in the page. The demo is a JavaScript
+port of `seir_model.py` (RK4, 0.02-day step) validated against the Python
+pipeline (worst-case peak deviation < 0.05% across the tested parameter
+grid); the five presets reproduce the study's scenarios with the calibrated
+parameters. Demo sources: `docs/index.html` and `docs/demo_model.js`.
+
 ## Model
 
 Five compartments: susceptible `S`, exposed `E`, infectious `I`, recovered
@@ -116,6 +129,8 @@ visualize.py          8 figures -> plots/*.png + plots/all_figures.pdf
 main.py               End-to-end pipeline (dataset -> metrics -> figures)
 make_report.py        Builds output/SEIR_Report.pdf (fpdf2)
 make_pptx.py          Builds output/SEIR_Presentation.pptx (python-pptx)
+docs/index.html       Interactive browser demo (served by GitHub Pages)
+docs/demo_model.js    JavaScript SEIRV port used by the demo (validated)
 requirements.txt      Python dependencies
 README.md             This file
 data/                 Generated dataset and metadata (created at run time)

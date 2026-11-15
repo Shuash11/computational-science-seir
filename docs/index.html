@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEIR Epidemic Simulator - Live Demo | Computational Science, Section 2 Group 1</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2316283C'/%3E%3Cpath d='M2 13 C6 13 6 4 14 3' stroke='%230072B2' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<meta name="description" content="Interactive browser demo of the SEIRV epidemic model with intervention policies: drag transmission and vaccination controls and watch the epidemic curve respond instantly.">
+<style>
+  /* ------------------------------------------------------------------ tokens
+     Design tokens mirror the project's visual system used in the PDF report
+     and slide deck (Okabe-Ito palette, navy band, blue accent). */
+  :root {
+    --navy: #16283C;
+    --accent: #0072B2;
+    --accent-soft: #DCEBF7;
+    --orange: #E69F00;
+    --green: #009E73;
+    --vermillion: #D55E00;
+    --purple: #CC79A7;
+    --sky: #56B4E9;
+    --series-baseline: #9AA5B1;
+    /* Accessible text variants of the palette (WCAG 4.5:1 on white);
+       the brighter originals remain in use for chart graphics only. */
+    --green-text: #046B4E;
+    --red-text: #B03A00;
+
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --border: #D8DFE6;
+    --text: #242A32;
+    --muted: #4A5560;
+    --focus: #0072B2;
+
+    --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
+    --space-4: 16px; --space-5: 24px; --space-6: 32px;
+    --radius: 10px; --radius-s: 6px;
+    --shadow: 0 1px 3px rgba(22, 40, 60, 0.10), 0 4px 14px rgba(22, 40, 60, 0.06);
+
+    --font: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    --fs-title: clamp(1.25rem, 1.1rem + 1vw, 1.6rem);
+    --fs-body: 0.95rem;
+    --fs-small: 0.82rem;
+
+    --motion-fast: 120ms;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    font-size: var(--fs-body);
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  a { color: var(--accent); }
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* ---------------------------------------------------------------- header */
+  .band {
+    background: var(--navy);
+    color: #FFFFFF;
+    border-bottom: 4px solid var(--accent);
+  }
+  .band-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4) var(--space-4);
+  }
+  .band h1 {
+    margin: 0 0 var(--space-1);
+    font-size: var(--fs-title);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .band p {
+    margin: var(--space-1) 0 0;
+    color: #B9CCE0;
+    font-size: var(--fs-small);
+    max-width: 72ch;
+  }
+  .band .crumbs { color: #8FB4D6; font-size: var(--fs-small); margin: 0 0 var(--space-2); }
+
+  /* ---------------------------------------------------------------- layout */
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: var(--space-4);
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: start;
+  }
+  @media (max-width: 940px) {
+    .wrap { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: var(--space-4);
+  }
+  .panel + .panel { margin-top: var(--space-4); }
+  .panel h2 {
+    margin: 0 0 var(--space-3);
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--navy);
+    border-bottom: 2px solid var(--accent-soft);
+    padding-bottom: var(--space-2);
+  }
+
+  /* -------------------------------------------------------------- presets */
+  .presets { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .preset-btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: var(--radius-s);
+    font: inherit;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease;
+  }
+  .preset-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .preset-btn[aria-pressed="true"] {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: #FFFFFF;
+  }
+  .preset-desc {
+    margin: var(--space-3) 0 0;
+    font-size: var(--fs-small);
+    color: var(--muted);
+    min-height: 2.6em;
+  }
+
+  /* -------------------------------------------------------------- sliders */
+  .group { border: 0; margin: 0 0 var(--space-4); padding: 0; }
+  .group legend {
+    font-size: var(--fs-small);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding: 0 0 var(--space-2);
+  }
+  .ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--space-2); margin-bottom: var(--space-3); }
+  .ctl label { grid-column: 1 / 2; font-size: var(--fs-small); font-weight: 600; }
+  .ctl output {
+    grid-column: 2 / 3;
+    font-size: var(--fs-small);
+    font-variant-numeric: tabular-nums;
+    color: var(--navy);
+    font-weight: 700;
+    text-align: right;
+  }
+  .ctl input[type="range"] { grid-column: 1 / 3; width: 100%; accent-color: var(--accent); height: 28px; }
+  .ctl input[type="number"] {
+    grid-column: 1 / 3;
+    width: 100%;
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-s);
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+  .hint { font-size: 0.78rem; color: var(--muted); margin: var(--space-2) 0 0; }
+
+  /* --------------------------------------------------------------- results */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-s);
+    padding: var(--space-3);
+  }
+  .card .k { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; }
+  .card .v { font-size: 1.45rem; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .card .d { font-size: 0.78rem; color: var(--muted); }
+  .card .d.good { color: var(--green-text); font-weight: 600; }
+  .card .d.bad { color: var(--red-text); font-weight: 600; }
+
+  .vs-line {
+    font-size: var(--fs-small);
+    color: var(--muted);
+    margin: 0 0 var(--space-3);
+  }
+  .vs-line strong { color: var(--navy); }
+
+  .chart-block + .chart-block { margin-top: var(--space-4); }
+  .chart-title {
+    margin: 0 0 var(--space-2);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  canvas { display: block; width: 100%; height: auto; border-radius: var(--radius-s); }
+  #chartInfectious { aspect-ratio: 16 / 7; }
+  #chartReff { aspect-ratio: 16 / 5; }
+  .chart-note { font-size: 0.78rem; color: var(--muted); margin: var(--space-2) 0 0; }
+
+  /* ---------------------------------------------------------------- footer */
+  footer {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: var(--space-4) var(--space-4) var(--space-6);
+    color: var(--muted);
+    font-size: var(--fs-small);
+  }
+  footer p { margin: var(--space-1) 0; }
+
+  /* --------------------------------------------------------- reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.01ms !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="band">
+  <div class="band-inner">
+    <p class="crumbs">Computational Science - Academic Year 2026-2027 - Section 2, Group 1</p>
+    <h1>SEIR Epidemic Simulator - Live Class Demo</h1>
+    <p>
+      A browser port of the project's SEIRV model. Drag the controls or click a policy preset
+      and the simulation re-runs instantly. Solid curve: your current policy. Dashed grey curve:
+      the same outbreak with no intervention at all.
+    </p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="panel" aria-labelledby="controlsHeading">
+    <h2 id="controlsHeading">Scenario controls</h2>
+
+    <div class="presets" role="group" aria-label="Project policy presets">
+      <button type="button" class="preset-btn" data-preset="baseline">Baseline</button>
+      <button type="button" class="preset-btn" data-preset="lockdown">Lockdown</button>
+      <button type="button" class="preset-btn" data-preset="masking">Masking</button>
+      <button type="button" class="preset-btn" data-preset="vaccination_only">Vaccination</button>
+      <button type="button" class="preset-btn" data-preset="combined">Combined</button>
+    </div>
+    <p class="preset-desc" id="presetDesc"></p>
+
+    <fieldset class="group">
+      <legend>Outbreak</legend>
+      <div class="ctl">
+        <label for="r0">Basic reproduction number R0</label>
+        <output id="r0Out" for="r0">2.20</output>
+        <input type="range" id="r0" min="0.8" max="4" step="0.005" value="2.205">
+      </div>
+      <div class="ctl">
+        <label for="capacity">Healthcare capacity (simultaneous infectious)</label>
+        <output id="capacityOut" for="capacity">2,000</output>
+        <input type="range" id="capacity" min="250" max="6000" step="250" value="2000">
+      </div>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend>Transmission interventions</legend>
+      <div class="ctl">
+        <label for="reduction">Masking: transmission reduction</label>
+        <output id="reductionOut" for="reduction">30%</output>
+        <input type="range" id="reduction" min="0" max="80" step="5" value="30">
+      </div>
+      <div class="ctl">
+        <label for="maskStart">Masking start day</label>
+        <output id="maskStartOut" for="maskStart">30</output>
+        <input type="range" id="maskStart" min="0" max="200" step="5" value="30">
+      </div>
+      <div class="ctl">
+        <label for="lockdownReduction">Lockdown: transmission reduction</label>
+        <output id="lockdownReductionOut" for="lockdownReduction">55%</output>
+        <input type="range" id="lockdownReduction" min="0" max="80" step="5" value="55">
+      </div>
+      <div class="ctl">
+        <label for="lockdownStart">Lockdown start day</label>
+        <output id="lockdownStartOut" for="lockdownStart">40</output>
+        <input type="range" id="lockdownStart" min="0" max="200" step="5" value="40">
+      </div>
+      <div class="ctl">
+        <label for="releaseDay">Lockdown release day</label>
+        <output id="releaseDayOut" for="releaseDay">100</output>
+        <input type="range" id="releaseDay" min="10" max="300" step="5" value="100">
+      </div>
+      <div class="ctl">
+        <label for="postReduction">After release: remaining reduction</label>
+        <output id="postReductionOut" for="postReduction">25%</output>
+        <input type="range" id="postReduction" min="0" max="60" step="5" value="25">
+      </div>
+    </fieldset>
+
+    <fieldset class="group" style="margin-bottom: 0;">
+      <legend>Vaccination</legend>
+      <div class="ctl">
+        <label for="vaccStart">Campaign start day</label>
+        <output id="vaccStartOut" for="vaccStart">60</output>
+        <input type="range" id="vaccStart" min="0" max="250" step="5" value="60">
+      </div>
+      <div class="ctl" style="margin-bottom: 0;">
+        <label for="vaccRate">Nominal capacity (doses/day at full susceptibility)</label>
+        <output id="vaccRateOut" for="vaccRate">4,000</output>
+        <input type="range" id="vaccRate" min="0" max="8000" step="250" value="4000">
+      </div>
+    </fieldset>
+
+    <p class="hint">The campaign ramps linearly over 80 days from its start day, matching the project's vaccination rollout.</p>
+  </section>
+
+  <section aria-labelledby="resultsHeading">
+    <div class="panel">
+      <h2 id="resultsHeading">Live results</h2>
+
+      <div class="cards">
+        <div class="card">
+          <div class="k">Peak infectious</div>
+          <div class="v" id="mPeak">-</div>
+          <div class="d" id="dPeak"></div>
+        </div>
+        <div class="card">
+          <div class="k">Peak day</div>
+          <div class="v" id="mDay">-</div>
+          <div class="d" id="dDay"></div>
+        </div>
+        <div class="card">
+          <div class="k">Days above capacity</div>
+          <div class="v" id="mAbove">-</div>
+          <div class="d" id="dAbove"></div>
+        </div>
+        <div class="card">
+          <div class="k">Total infected</div>
+          <div class="v" id="mAttack">-</div>
+          <div class="d" id="dAttack"></div>
+        </div>
+      </div>
+
+      <p class="vs-line" id="vsLine"></p>
+      <p class="sr-live" id="liveSummary" aria-live="polite"
+         style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;"></p>
+
+      <div class="chart-block">
+        <h3 class="chart-title">Infectious individuals over time</h3>
+        <canvas id="chartInfectious" role="img"
+                aria-label="Line chart of simultaneously infectious individuals over 365 days."></canvas>
+        <p class="chart-note">Dashed red line: healthcare capacity. Marker: peak of the current policy.</p>
+      </div>
+
+      <div class="chart-block">
+        <h3 class="chart-title">Effective reproduction number R_eff(t)</h3>
+        <canvas id="chartReff" role="img"
+                aria-label="Line chart of the effective reproduction number over 365 days."></canvas>
+        <p class="chart-note">The outbreak shrinks while R_eff is below 1. Grey dashed: no intervention.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>
+    Browser port of the Python SEIRV pipeline (seir_model.py, RK45) - reimplemented in JavaScript (RK4, step 0.02 day)
+    and validated against the pipeline output. Scenario presets reproduce the project's five policies with the
+    calibrated transmission rate beta0 = 0.4409 (R0 = 2.205 on the demo grid; fitted value 2.2045), population 500,000, latent period 3 days, infectious period 5 days.
+  </p>
+  <p>
+    Computational Science - Section 2, Group 1: CALIGUID, V. K. B. - ARAPON, G. M. - DUMANDAGAN, A. F. - RAFOL, S. L. R. -
+    DELA CRUZ, C. M. - BARIMBAO, J. M. A.
+  </p>
+  <p><a href="https://github.com/Shuash11/computational-science-seir">Source code, report and presentation on GitHub</a></p>
+</footer>
+
+<script type="module">
+import { PRESETS, simulate, DEFAULTS } from "./demo_model.js";
+
+// JS mirror of the CSS design tokens (single palette used by all charts).
+const TOKENS = {
+  navy: "#16283C", accent: "#0072B2", baseline: "#9AA5B1",
+  capacity: "#D55E00", capacityText: "#B03A00",
+  grid: "#E3E9EF", axis: "#5E6A76", surface: "#FFFFFF",
+};
+
+const SLIDERS = ["r0", "capacity", "reduction", "maskStart", "lockdownReduction",
+                 "lockdownStart", "releaseDay", "postReduction", "vaccStart", "vaccRate"];
+
+const settings = { ...PRESETS.combined };
+let activePreset = "combined";
+
+const fmt = new Intl.NumberFormat("en-US");
+
+function readSettings() {
+  const s = { ...settings };
+  for (const id of SLIDERS) s[id] = parseFloat(document.getElementById(id).value);
+  // Keep the schedule order valid regardless of slider order.
+  s.releaseDay = Math.max(s.releaseDay, s.lockdownStart + 5);
+  return s;
+}
+
+function writeSettings(s) {
+  for (const id of SLIDERS) {
+    if (s[id] !== undefined) document.getElementById(id).value = String(s[id]);
+  }
+  syncOutputs();
+}
+
+function syncOutputs() {
+  const s = readSettings();
+  document.getElementById("r0Out").textContent = String(parseFloat(s.r0.toFixed(3)));
+  document.getElementById("capacityOut").textContent = fmt.format(s.capacity);
+  document.getElementById("reductionOut").textContent = s.reduction + "%";
+  document.getElementById("maskStartOut").textContent = s.maskStart;
+  document.getElementById("lockdownReductionOut").textContent = s.lockdownReduction + "%";
+  document.getElementById("lockdownStartOut").textContent = s.lockdownStart;
+  document.getElementById("releaseDayOut").textContent = s.releaseDay;
+  document.getElementById("postReductionOut").textContent = s.postReduction + "%";
+  document.getElementById("vaccStartOut").textContent = s.vaccStart;
+  document.getElementById("vaccRateOut").textContent = fmt.format(s.vaccRate);
+}
+
+function baselineSettings(s) {
+  return {
+    r0: s.r0, capacity: s.capacity,
+    reduction: 0, maskStart: s.maskStart,
+    lockdownReduction: 0, lockdownStart: s.lockdownStart,
+    releaseDay: s.releaseDay, postReduction: 0,
+    vaccStart: s.vaccStart, vaccRatePerDay: 0,
+  };
+}
+
+// ---------------------------------------------------------------- rendering
+function niceStep(range, targetTicks) {
+  const raw = range / targetTicks;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  for (const m of [1, 2, 5, 10]) {
+    if (mag * m >= raw) return mag * m;
+  }
+  return mag * 10;
+}
+
+function setupCanvas(canvas) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = TOKENS.surface;
+  ctx.fillRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+
+function drawAxes(ctx, area, xMax, yMax, yFmt) {
+  const { x, y, w, h } = area;
+  ctx.strokeStyle = TOKENS.axis;
+  ctx.lineWidth = 1;
+  ctx.font = "11px " + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = TOKENS.axis;
+  const xStep = niceStep(xMax, 7);
+  ctx.textAlign = "center";
+  for (let v = 0; v <= xMax + 1e-9; v += xStep) {
+    const px = x + (v / xMax) * w;
+    ctx.strokeStyle = TOKENS.grid;
+    ctx.beginPath(); ctx.moveTo(px, y); ctx.lineTo(px, y + h); ctx.stroke();
+    ctx.fillText(String(Math.round(v)), px, y + h + 15);
+  }
+  const yStep = niceStep(yMax, 5);
+  ctx.textAlign = "right";
+  for (let v = 0; v <= yMax + 1e-9; v += yStep) {
+    const py = y + h - (v / yMax) * h;
+    ctx.strokeStyle = TOKENS.grid;
+    ctx.beginPath(); ctx.moveTo(x, py); ctx.lineTo(x + w, py); ctx.stroke();
+    ctx.fillText(yFmt(v), x - 6, py + 4);
+  }
+  ctx.strokeStyle = TOKENS.axis;
+  ctx.strokeRect(x, y, w, h);
+}
+
+function drawSeries(ctx, area, xArr, yArr, xMax, yMax, color, dash) {
+  const { x, y, w, h } = area;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = dash ? 1.4 : 2.2;
+  ctx.setLineDash(dash ? [6, 4] : []);
+  ctx.beginPath();
+  for (let i = 0; i < xArr.length; i++) {
+    const px = x + (xArr[i] / xMax) * w;
+    const py = y + h - (Math.max(0, yArr[i]) / yMax) * h;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function legend(ctx, area, entries) {
+  const { x, y } = area;
+  const family = getComputedStyle(document.body).fontFamily;
+  ctx.font = "11px " + family;
+  const widths = entries.map(([label]) => 27 + ctx.measureText(label).width + 18);
+  const total = widths.reduce((a, b) => a + b, 0);
+  let lx = x + area.w - total - 6;
+  const ly = y + 12;
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.fillRect(lx - 5, ly - 13, total + 6, 18);
+  for (let i = 0; i < entries.length; i++) {
+    const [label, color, dash] = entries[i];
+    ctx.strokeStyle = color;
+    ctx.lineWidth = dash ? 1.4 : 2.4;
+    ctx.setLineDash(dash ? [6, 4] : []);
+    ctx.beginPath(); ctx.moveTo(lx, ly - 4); ctx.lineTo(lx + 22, ly - 4); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = TOKENS.axis;
+    ctx.textAlign = "left";
+    ctx.fillText(label, lx + 27, ly);
+    lx += widths[i];
+  }
+}
+
+/** Draw text on a translucent white plate so it stays readable over the data. */
+function labelBox(ctx, text, x, y, align, color, font) {
+  ctx.font = font || "11px " + getComputedStyle(document.body).fontFamily;
+  const w = ctx.measureText(text).width;
+  const px = align === "right" ? x - w : x;
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.fillRect(px - 4, y - 12, w + 8, 16);
+  ctx.fillStyle = color;
+  ctx.textAlign = "left";
+  ctx.fillText(text, px, y);
+}
+
+function drawInfectious(live, base) {
+  const canvas = document.getElementById("chartInfectious");
+  const { ctx, w, h } = setupCanvas(canvas);
+  const area = { x: 52, y: 34, w: w - 70, h: h - 62 };
+  const yMax = Math.max(live.peakI, base.peakI, live.capacity) * 1.08;
+  drawAxes(ctx, area, live.days, yMax, (v) => fmt.format(Math.round(v)));
+
+  // capacity line + annotation
+  const capY = area.y + area.h - (live.capacity / yMax) * area.h;
+  ctx.strokeStyle = TOKENS.capacity;
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(area.x, capY); ctx.lineTo(area.x + area.w, capY); ctx.stroke();
+  ctx.setLineDash([]);
+  labelBox(ctx, "capacity " + fmt.format(live.capacity),
+           area.x + area.w - 8, capY - 6, "right", TOKENS.capacityText);
+
+  drawSeries(ctx, area, base.t, base.I, live.days, yMax, TOKENS.baseline, true);
+  drawSeries(ctx, area, live.t, live.I, live.days, yMax, TOKENS.accent, false);
+
+  // peak marker + label (right-aligned near the chart edge, white-backed)
+  const px = area.x + (live.peakDay / live.days) * area.w;
+  const py = area.y + area.h - (live.peakI / yMax) * area.h;
+  ctx.fillStyle = TOKENS.accent;
+  ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+  const nearRight = px > area.x + area.w - 210;
+  labelBox(ctx, "peak " + fmt.format(Math.round(live.peakI)) + " (day " + live.peakDay + ")",
+           nearRight ? px - 8 : px + 8, Math.max(py - 10, area.y + 28),
+           nearRight ? "right" : "left", TOKENS.navy,
+           "bold 12px " + getComputedStyle(document.body).fontFamily);
+
+  legend(ctx, area, [
+    ["current policy", TOKENS.accent, false],
+    ["no intervention", TOKENS.baseline, true],
+    ["capacity", TOKENS.capacity, true],
+  ]);
+
+  canvas.setAttribute("aria-label",
+    "Line chart: with the current policy the peak is " + fmt.format(Math.round(live.peakI)) +
+    " infectious on day " + live.peakDay + ", versus " + fmt.format(Math.round(base.peakI)) +
+    " without intervention.");
+}
+
+function drawReff(live, base) {
+  const canvas = document.getElementById("chartReff");
+  const { ctx, w, h } = setupCanvas(canvas);
+  const area = { x: 52, y: 26, w: w - 70, h: h - 52 };
+  const yMax = Math.max(2.5, Math.min(6, live.r0 * 1.2));
+  drawAxes(ctx, area, live.days, yMax, (v) => v.toFixed(1));
+
+  const oneY = area.y + area.h - (1 / yMax) * area.h;
+  ctx.strokeStyle = TOKENS.navy;
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(area.x, oneY); ctx.lineTo(area.x + area.w, oneY); ctx.stroke();
+  ctx.setLineDash([]);
+  labelBox(ctx, "R_eff = 1 (tipping point)", area.x + area.w - 8, oneY - 6, "right", TOKENS.navy);
+
+  drawSeries(ctx, area, base.t, base.reff, live.days, yMax, TOKENS.baseline, true);
+  drawSeries(ctx, area, live.t, live.reff, live.days, yMax, TOKENS.accent, false);
+  legend(ctx, area, [
+    ["current policy", TOKENS.accent, false],
+    ["no intervention", TOKENS.baseline, true],
+  ]);
+}
+
+// --------------------------------------------------------------- update loop
+let pending = false;
+
+function update() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => {
+    pending = false;
+    const s = readSettings();
+    const live = simulate(s);
+    const base = simulate(baselineSettings(s));
+
+    document.getElementById("mPeak").textContent = fmt.format(Math.round(live.peakI));
+    document.getElementById("mDay").textContent = "day " + live.peakDay;
+    document.getElementById("mAbove").textContent = fmt.format(live.daysAbove);
+    document.getElementById("mAttack").textContent = live.attackRate.toFixed(1) + "%";
+
+    const dPeak = 100 * (1 - live.peakI / base.peakI);
+    const dAbove = live.daysAbove - base.daysAbove;
+    const dAttack = 100 * (1 - live.totalInfections / base.totalInfections);
+    setDelta("dPeak", dPeak, "% lower peak", true);
+    setDelta("dAbove", live.daysAbove <= base.daysAbove ? dAbove : dAbove, " vs no action", false, true);
+    setDelta("dAttack", dAttack, "% fewer infections", true);
+    setDelta("dDay", 0, live.daysAbove > base.daysAbove ? "longer, flatter epidemic" : "", false, true);
+
+    document.getElementById("vsLine").innerHTML =
+      "Compared with <strong>no intervention</strong> at R0 = " +
+      String(parseFloat(s.r0.toFixed(3))) + ": peak " +
+      signed(dPeak) + "%, total infections " + signed(dAttack) + "%.";
+
+    document.getElementById("liveSummary").textContent =
+      "Current policy result: peak infectious " + fmt.format(Math.round(live.peakI)) +
+      " on day " + live.peakDay + "; " + live.daysAbove + " days above capacity; " +
+      live.attackRate.toFixed(1) + " percent of the population infected.";
+
+    drawInfectious(live, base);
+    drawReff(live, base);
+  });
+}
+
+function signed(v) {
+  const r = v.toFixed(1);
+  return (v > 0 ? "-" : v < 0 ? "+" : "") + Math.abs(v).toFixed(1);
+}
+
+function setDelta(id, value, suffix, allowNegative, raw) {
+  const el = document.getElementById(id);
+  if (raw) {
+    el.textContent = suffix ? value + suffix : "";
+    el.className = "d";
+    return;
+  }
+  if (Math.abs(value) < 0.05) { el.textContent = ""; el.className = "d"; return; }
+  el.textContent = Math.abs(value).toFixed(1) + suffix;
+  el.className = "d " + (value > 0 ? "good" : "bad");
+}
+
+// ------------------------------------------------------------------ events
+function markCustom() {
+  activePreset = null;
+  for (const b of document.querySelectorAll(".preset-btn")) b.setAttribute("aria-pressed", "false");
+  document.getElementById("presetDesc").textContent =
+    "Custom configuration (edited from a preset).";
+}
+
+document.querySelectorAll(".preset-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const key = btn.dataset.preset;
+    const preset = PRESETS[key];
+    activePreset = key;
+    settings.r0 = 2.205; // slider-grid value matching the fitted R0 = 2.2045
+    settings.capacity = 2000;
+    Object.assign(settings, preset);
+    writeSettings(settings);
+    for (const b of document.querySelectorAll(".preset-btn")) {
+      b.setAttribute("aria-pressed", String(b === btn));
+    }
+    document.getElementById("presetDesc").textContent = preset.description;
+    update();
+  });
+});
+
+for (const id of SLIDERS) {
+  const el = document.getElementById(id);
+  el.addEventListener("input", () => { markCustom(); syncOutputs(); update(); });
+}
+
+window.addEventListener("resize", update);
+
+// ------------------------------------------------------------------- init
+(function init() {
+  const btn = document.querySelector('.preset-btn[data-preset="combined"]');
+  btn.click();
+})();
+</script>
+</body>
+</html>
