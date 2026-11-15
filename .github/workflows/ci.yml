@@ -51,6 +51,8 @@ jobs:
           assert Path("data/synthetic_epidemic.csv").is_file()
           assert Path("plots/all_figures.pdf").is_file()
           assert Path("plots/P1_dataset_overview.png").is_file()
+          assert Path("docs/index.html").is_file()
+          assert Path("docs/demo_model.js").is_file()
 
           print(
               "OK: deliverables verified "
