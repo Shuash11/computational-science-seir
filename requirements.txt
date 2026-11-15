@@ -1,0 +1,11 @@
+# Core computational stack
+numpy>=2.0
+scipy>=1.16
+matplotlib>=3.9
+pandas>=2.2
+# Deliverable builders (report + presentation)
+fpdf2>=2.8
+python-pptx>=1.0
+Pillow>=10.0
+# Verification helpers (page-count and placeholder checks)
+pypdf>=5.0

@@ -1,0 +1,62 @@
+{
+  "title": "Synthetic COVID-like outbreak in a mid-sized city (SEIRV)",
+  "data_type": "synthetic",
+  "honesty_note": "This dataset is entirely synthetic and was produced by the SEIRV model in seir_model.py with the parameters below. It does not contain real surveillance data.",
+  "population": 500000,
+  "seed": 42,
+  "days": 365,
+  "start_date": "2023-01-01",
+  "true_parameters": {
+    "beta0": 0.44,
+    "sigma": 0.3333333333333333,
+    "gamma": 0.2,
+    "reporting_fraction": 0.35,
+    "initial_exposed": 60.0,
+    "initial_infectious": 25.0
+  },
+  "intervention_timeline": {
+    "beta_segments": [
+      {
+        "day": 0,
+        "multiplier": 1.0
+      },
+      {
+        "day": 40,
+        "multiplier": 0.45
+      },
+      {
+        "day": 100,
+        "multiplier": 0.75
+      }
+    ],
+    "beta_timeline_notes": [
+      {
+        "day": 40,
+        "note": "Strict measures begin (beta x0.45)"
+      },
+      {
+        "day": 80,
+        "note": "Vaccination rollout begins"
+      },
+      {
+        "day": 100,
+        "note": "Partial relaxation (beta x0.75)"
+      }
+    ],
+    "vaccination_ramp": {
+      "start_day": 80,
+      "full_rate_day": 140,
+      "peak_rate_per_capita": 0.008,
+      "nominal_daily_capacity": 4000.0
+    }
+  },
+  "generation_method": "True SEIRV trajectory integrated with scipy solve_ivp (RK45, rtol=1e-6, atol=1e-8) on a 0.25-day grid with breakpoint-split integration at schedule jumps. Daily clinical cases are the integral of sigma*E over each day (first differences of the cumulative clinical counter at day boundaries). Reported cases are drawn per day as Poisson(rho * clinical_cases); daily vaccinations are the modelled nu(t)*S(t) flow integrated over each day and rounded to integers. Cumulative columns are running sums of the daily columns.",
+  "observed_summary": {
+    "peak_reported_cases": 562,
+    "peak_reported_day": 136,
+    "cumulative_reported_cases": 54164,
+    "total_vaccinations": 303445,
+    "true_total_infections": 154993.68914748347
+  },
+  "generated_at": "2026-11-15T00:11:31Z"
+}

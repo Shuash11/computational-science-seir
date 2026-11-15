@@ -1,0 +1,186 @@
+{
+  "generated_at": "2026-11-15T03:22:15Z",
+  "study": {
+    "title": "SEIR epidemic simulation under different intervention policies",
+    "course": "Computational Science - Section 2, Group 1",
+    "population": 500000,
+    "days": 365,
+    "seed": 42,
+    "healthcare_capacity": 2000,
+    "sigma": 0.3333333333333333,
+    "gamma": 0.2,
+    "dataset_file": "data/synthetic_epidemic.csv",
+    "data_type": "synthetic (documented generation script)"
+  },
+  "calibration": {
+    "fitted_parameters": {
+      "beta0": 0.44091946951750266,
+      "rho": 0.34370942901807217,
+      "e0": 59.43998754175929
+    },
+    "diagnostics": {
+      "r_squared": 0.9945204412946393,
+      "rmse": 13.088557179524116,
+      "mae": 7.747572719013861,
+      "r_squared_log1p": 0.9953485841044084,
+      "rmse_log1p": 0.1747413564667076,
+      "loss_log1p_mse": 0.03053454165982497,
+      "multistart_losses": [
+        0.03053454165982497,
+        3.5797724563022375,
+        0.030534976851853135,
+        0.03053459298984799
+      ],
+      "n_starts": 4,
+      "n_converged": 4,
+      "optimizer_success": true,
+      "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+      "optimizer_iterations": 34,
+      "target_r_squared": 0.9,
+      "meets_target": true,
+      "fixed_parameters": {
+        "sigma": 0.3333333333333333,
+        "gamma": 0.2,
+        "initial_infectious": 25.0
+      },
+      "assumptions": "sigma and gamma fixed at literature values; initial infectious count fixed at the documented study value; the documented intervention and vaccination timeline is assumed known."
+    }
+  },
+  "scenarios": {
+    "baseline": {
+      "description": "No intervention: transmission stays constant at the calibrated baseline rate for the full year.",
+      "beta_segments": [
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "vaccination_ramp": null,
+      "peak_infectious": 58100.36,
+      "peak_day": 72,
+      "total_infections": 422349.5,
+      "attack_rate_percent": 84.47,
+      "days_above_capacity": 85,
+      "epidemic_duration_days": 193,
+      "still_active_at_horizon": false,
+      "reduction_total_infections_percent": null,
+      "reduction_peak_infectious_percent": null
+    },
+    "lockdown": {
+      "description": "Strict measures on days 40-99 (beta x0.45), then partial relaxation to beta x0.75 from day 100 onward.",
+      "beta_segments": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          40.0,
+          0.45
+        ],
+        [
+          100.0,
+          0.75
+        ]
+      ],
+      "vaccination_ramp": null,
+      "peak_infectious": 16135.68,
+      "peak_day": 159,
+      "total_infections": 306073.55,
+      "attack_rate_percent": 61.215,
+      "days_above_capacity": 195,
+      "epidemic_duration_days": 365,
+      "still_active_at_horizon": true,
+      "reduction_total_infections_percent": 27.531,
+      "reduction_peak_infectious_percent": 72.228
+    },
+    "masking": {
+      "description": "Sustained masking from day 30 onward (beta x0.70 per day).",
+      "beta_segments": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          30.0,
+          0.7
+        ]
+      ],
+      "vaccination_ramp": null,
+      "peak_infectious": 22775.22,
+      "peak_day": 95,
+      "total_infections": 306561.96,
+      "attack_rate_percent": 61.312,
+      "days_above_capacity": 128,
+      "epidemic_duration_days": 297,
+      "still_active_at_horizon": false,
+      "reduction_total_infections_percent": 27.415,
+      "reduction_peak_infectious_percent": 60.8
+    },
+    "vaccination_only": {
+      "description": "No transmission change; accelerated vaccination starts on day 60 and ramps toward the nominal 4000 doses/day capacity at full susceptibility by day 140 (20 days earlier than the observed rollout; actual daily doses decline as susceptibles are removed).",
+      "beta_segments": [
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "vaccination_ramp": [
+        60.0,
+        140.0,
+        0.008
+      ],
+      "peak_infectious": 57959.37,
+      "peak_day": 72,
+      "total_infections": 416212.04,
+      "attack_rate_percent": 83.242,
+      "days_above_capacity": 84,
+      "epidemic_duration_days": 179,
+      "still_active_at_horizon": false,
+      "reduction_total_infections_percent": 1.453,
+      "reduction_peak_infectious_percent": 0.243
+    },
+    "combined": {
+      "description": "Masking from day 30 (x0.70) combined with the lockdown schedule (x0.45 on days 40-99, x0.75 after) and accelerated vaccination from day 60; effective multipliers are 0.315 on days 40-99 and 0.525 afterwards.",
+      "beta_segments": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          30.0,
+          0.7
+        ],
+        [
+          40.0,
+          0.315
+        ],
+        [
+          100.0,
+          0.525
+        ]
+      ],
+      "vaccination_ramp": [
+        60.0,
+        140.0,
+        0.008
+      ],
+      "peak_infectious": 3178.2,
+      "peak_day": 42,
+      "total_infections": 24532.41,
+      "attack_rate_percent": 4.906,
+      "days_above_capacity": 22,
+      "epidemic_duration_days": 225,
+      "still_active_at_horizon": false,
+      "reduction_total_infections_percent": 94.191,
+      "reduction_peak_infectious_percent": 94.53
+    }
+  },
+  "dataset": {
+    "observed_peak_reported_cases": 562,
+    "observed_peak_day": 136,
+    "cumulative_reported_cases": 54164,
+    "total_vaccinations": 303445,
+    "mean_daily_reported_cases": 148.395,
+    "days_with_zero_reported_cases": 119
+  }
+}
